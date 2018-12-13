@@ -1,0 +1,3 @@
+These files are based on copies made on 13/12/2018.
+
+I need to modify them to create a readable HMM for github.
