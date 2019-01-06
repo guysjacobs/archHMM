@@ -7,6 +7,8 @@
 #pos1 cM
 #pos2 cM
 
+###Added flexibility so that the delimiter, and pos and cM columns, of the gMap can be chosen.
+
 ###GSJ 18/11/2017
 
 import gzip
@@ -47,7 +49,7 @@ def fileoperation_interpolate_gmap_1KG(mapfile, posfile, outfile, g_map_pos_IDx 
                 break
             else:
                 curr_gmap_pos += 1
-        if curr_gmap_pos == max_pos:
+        if (gmap[curr_gmap_pos][0] < curr_pos) and curr_gmap_pos == max_pos:
             #curr_pos is after the end of the gmap. Keep on adding this gmap position as no information.
             interp_map.append(gmap[curr_gmap_pos][1])
         elif curr_gmap_pos == 0:

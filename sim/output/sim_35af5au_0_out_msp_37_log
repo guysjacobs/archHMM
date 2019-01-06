@@ -1,0 +1,26 @@
+##ScriptVersion:	viterbiArchaicIntrogression_IndByInd_git_v0.2.py
+##Input file(s):	./sim/sim_35af5au_0.vcf.gz
+##Individual:	msp_37
+##Comparison:	Denisovan
+##Viterbi method:	binary_archaic_derived_sharing_racimo2016
+##Viterbi transition parameter(s):	100.000000000000	100.000000000000	100.000000000000	100.000000000000
+##Viterbi initial parameter(s):	0.010000000000	0.010000000000	0.150000000000
+##Exclusion scheme is:	[[[3, 2]], [[3, '.']], [[3, 'nan']]]
+##Classification scheme (Chrom A) is:	[[[[4, 0]], [[6, 1], [12, 0.014295715285714284, 1.0]]], [[[6, 1], [12, 0.0, 0.014295714285714285]]]]
+##Classification scheme (Chrom B) is:	[[[[5, 0]], [[7, 1], [12, 0.014295715285714284, 1.0]]], [[[7, 1], [12, 0.0, 0.014295714285714285]]]]
+#msp_37_1_1	Total SNPs:	16496
+#msp_37_1_1	Class_0-N_SNPs	16455	41
+#msp_37_1_1	Inferred_archaic_SNPs	285
+#msp_37_1_1	Total_switchpoints	11
+#msp_37_1_1	Transition_probability	100.000 100.000 100.000 100.000
+#msp_37_1_1	Average_haplotype_length	2527.5 47.5
+#msp_37_1_1	Inferred_parameters	0.0003 0.1500
+#msp_37_1_1	Inferred_transitions	1.0000 0.6133 27.7351 1.0000
+#msp_37_1_2	Total SNPs:	16577
+#msp_37_1_2	Class_0-N_SNPs	16556	21
+#msp_37_1_2	Inferred_archaic_SNPs	95
+#msp_37_1_2	Total_switchpoints	5
+#msp_37_1_2	Transition_probability	100.000 100.000 100.000 100.000
+#msp_37_1_2	Average_haplotype_length	3510.7 31.7
+#msp_37_1_2	Inferred_parameters	0.0003 0.1500
+#msp_37_1_2	Inferred_transitions	1.0000 0.3021 42.7795 1.0000

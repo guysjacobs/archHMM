@@ -5,9 +5,8 @@
 #chrom chromStart chromEnd   name  score
 #chr7  127471196  127472363  Pos1  0   ...
 
-###I'm going to use chrom, chromStart, chromEnd as usual.
-###I'm going to use name to give the type in the HMM (0 or 1 usually) and score
-###to indicate how many SNPs support the region.
+###I use chrom, chromStart, chromEnd as usual.
+###I use name to give the type in the HMM (0 or 1 usually) and score to indicate how many SNPs support the region.
 ###I make no statement about what is happening between regions.
 
 ###The track is used to indicate the individual and note the meaning of the
