@@ -32,6 +32,8 @@ from calculate_viterbiHMM_binary_archaic_derived_sharing import calculate_viterb
 from fileoperation_viterbi_positions_to_BED import *
 from readin_populationFileEOL import *
 
+VERSION = 0.20
+
 parser = argparse.ArgumentParser(description='Calculate tracts of archaic introgression based on a Viterbi algorithm and allele sharing, based on a VCF file including both a target individual and archaics.')
 
 parser.add_argument('--infile', metavar='infile', type=str, nargs='*', default = ['None'],
@@ -73,7 +75,7 @@ parser.add_argument('--viterbi_EM_mode', '-vEMmode', dest='viterbi_EM_mode', act
                     help='How to do the EM fitting? There are three options - each chromosome may be fitted independently (independent_chroms); you can do a run in which I specifically save the fitted parameters for all chromosomes included in the analysis (save_fitted_parameters); or you can do a run in which previously saved fitted parameters are read in and averaged, with these parameters then taken as fixed (readin_fitted_parameters). The latter two are used together by running save_fitted_parameters and then readin_fitted_parameters.')
 
 parser.add_argument('--cleanup_level', '-cl', dest = 'cleanup_level', type = int, action = 'store', nargs = '?', default = '0',
-                    help="which files to delete during the calculation. 0 means no files are deleted; 1 deletes the archaicAnnotation file; 2 additionally deletes the chromosome-by-chromosome output files")
+                    help="which files to delete during the calculation. 0 means no files are deleted; 1 deletes the archaicAnnotation file; 2 additionally deletes the chromosome-by-chromosome output files; 3 additionally deletes any fitted emissions or transmissions files; 4 additionally deletes all results files (just left with logs).")
 parser.add_argument('--chrom_to_bed', '-chrombed', dest='chrom_to_bed', action = 'store_true', default = True,
                     help="convert the Viterbi output files to a BED file for comparing individuals/ease of manipulation.")
 
