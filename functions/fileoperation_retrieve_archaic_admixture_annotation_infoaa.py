@@ -17,8 +17,8 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
     where SNP_A, SNP_B, SNP_ANC are 0/1;
     SHARED_A and SHARED_B are 0 if different from target archaic, 1 if the same and -1 if unknown;
     the TYPE_s are -1 (missing) or 0-5:
-    0,1,2 = same as archaic target, with target being anc, der or unknown
-    3,4,5 = different from archaic target, target being anc, der or unknown
+    0,1,2 = same as archaic target, with ind target being anc, der or unknown
+    3,4,5 = different from archaic target, ind target being anc, der or unknown
     ARCHAIC_HET is 0 if hom (most), 1 if het,-1 if missing;
     ARCHAIC_QUALITY is 0 if bad and 1 if good, -1 if missing;
     ARCHAIC_SHARED is 0 if not shared, 1 if shared and -1 if unknown (one or both archaics is 'NN');
@@ -28,7 +28,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
     snp_locs = []
     snp_value = [] #Simply the value of the SNP. Useful as we might use whether this is low or high in humans overall as a proxy for ancestral/derived to extend coverage to regions with no Chimp information
     snp_shared = [] #0 if not found in archaic, 1 if found in archaic; -1 if unknown
-    snp_type = [] #0 if [ID(test,archaic), target is ancestral], 1 if [ID(test,archaic), target is derived], 2 if [ID(test,archaic), unknown]; 3 if [!ID(test,archaic), target is ancestral], 4 if [!ID(test,archaic), target is derived], 5 if [!ID(test,archaic), unknown]; -1 if unknown
+    snp_type = [] #0 if [ID(test,archaic), test is ancestral], 1 if [ID(test,archaic), test is derived], 2 if [ID(test,archaic), unknown]; 3 if [!ID(test,archaic), test is ancestral], 4 if [!ID(test,archaic), test is derived], 5 if [!ID(test,archaic), unknown]; -1 if unknown
     snp_archaic_het = [] #0 if hom, 1 if het; -1 if missing
     snp_archaic_quality = [] #0 if bad, 1 if good; -1 if missing
     snp_maf = []

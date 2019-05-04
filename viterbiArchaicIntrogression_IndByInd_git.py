@@ -22,8 +22,8 @@ import subprocess
 import time
 import gzip
 
-sys.path.insert(0, os.getcwd() + '/functions/')
-#print sys.path
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/functions/')
+print sys.path
 from fileoperation_classify_archaic_annotation_as_string_array import *
 from fileoperation_retrieve_archaic_admixture_annotation_infoaa import *
 from fileoperation_log_append_from_list import *
@@ -32,7 +32,7 @@ from calculate_viterbiHMM_binary_archaic_derived_sharing import calculate_viterb
 from fileoperation_viterbi_positions_to_BED import *
 from readin_populationFileEOL import *
 
-VERSION = 0.20
+VERSION = 0.21
 
 parser = argparse.ArgumentParser(description='Calculate tracts of archaic introgression based on a Viterbi algorithm and allele sharing, based on a VCF file including both a target individual and archaics.')
 
@@ -59,8 +59,11 @@ parser.add_argument('--log', '-l', dest='log', action = 'store_true', default = 
 parser.add_argument('--popfile', '-popfile', dest='popfile', type=str, action = 'store', nargs = '?', default = '',
                     help="population file (one individual name per line) to be used when allele classes are conditioned on population frequency")
 
-parser.add_argument('--viterbi_method', '-vm', dest='viterbi_method', action = 'store', nargs='?', default = 'binary_archaic_derived_sharing_racimo2016', choices = ['binary_archaic_derived_sharing_racimo2016'],
-                    help='the annotation/HMM method to be applied. The only operational option is currently binary_archaic_derived_sharing_racimo2016.')
+parser.add_argument('--viterbi_method', '-vm', dest='viterbi_method', action = 'store', nargs='?', default = 'binary_archaic_derived_sharing_racimo2016', choices = ['binary_archaic_derived_sharing_racimo2016', 'manual_specification'],
+                    help='the annotation/HMM method to be applied. The default operational option is currently binary_archaic_derived_sharing_racimo2016. Use manual_specification to read in a custom method.')
+parser.add_argument('--viterbi_specification_file', '-vspecf', dest='viterbi_specification_file', action = 'store', nargs='?', default = '', type = str,
+                    help='the manual HMM method specification file. This is only required if --viterbi_method is manual_specificaion. This file can be used to specify how the HMM runs - e.g. the minimum frequency, what SNP motifs count as what emssions 0 and 1. This method is primarily for testing different HMM approaches, adding some flexibilitiy...')
+
 
 parser.add_argument('--viterbi_init_parameters', '-vparam', dest='viterbi_init_parameters', type=float, action = 'store', nargs='*', default = [],
                     help='the initial parameters for the viterbi algorithm. Here, we expect three parameters - the initial probability of a SNP being introgressed, the emission probability of archaic signal (1s) in low-archaic regions and the rate of archaic signal in high-archaic regions.')
@@ -118,6 +121,11 @@ elif len(args.infile_recom) == 0 and np.sum(np.sum(np.reshape(args.viterbi_trans
 elif len(args.viterbi_transition) != 4:
     print "viterbi_transition is the transition matrix. As there are two hidden states it must have 4 entries."
 
+elif args.viterbi_method == 'manual_specification' and args.viterbi_specification_file == '':
+    print "viterbi_method is manual_specification. This requires an emission specification file which is provided using --viterbi_specification_file PATH_TO_SPECIFICATION_FILE"
+
+#TESTING I:\Dropbox\PythonPrograms\github\archHMM>python ./viterbiArchaicIntrogression_IndByInd_git.py --infile I:\Dropbox\Transfer\Indonesia_Diversity175_data\VCFsNew\chr%d.AD.AN_highQ_only_wo_N_biSNP.ANC.479.haps.vcf.gz --outfile I:\Dropbox\Transfer\Indonesia_Diversity175_data\hmm\herrInDeni\herrInDeni_CaseA_%s --infile_recom I:\Dropbox\Transfer\Indonesia_Diversity175_data\Genetic_maps\genetic_map_HapMapII_GRCh37\genetic_map_GRCh37_chr%d.txt.gz --chromosomes 21 22 --neanderthal_name AltaiNea --denisovan_name DenisovaPinky --target_individuals DenisovaPinky --target_archaic Neanderthal --log --popfile I:\Dropbox\Transfer\Indonesia_Diversity175_data\population_data\sample_lists\list_subset_africa_SSonly.txt --viterbi_method manual_specification --viterbi_specification_file I:\Dropbox\PythonPrograms\github\manual_specification_HMMHErDeni_CaseA.txt --viterbi_init_parameters 0.1 0.05 0.2 --viterbi_transition 0.9 0.1 0.1 0.9 --viterbi_fit_transition_rates --viterbi_EM_mode independent_chroms --cleanup_level 0
+
 else:
     #For each target, for each chromosome, do archaic annotation, summarise the output, and then do HMM Viterbi method
     #Determine the full file list for calculating archaich chunks
@@ -165,8 +173,48 @@ else:
         
         classification_scheme_B = [[[[5,0]], [[7,1],[12,minf+1e-9, 1.0]]],
                                    [[[7,1], [12,0.0,minf]]]]
-        
+
         exclusion_scheme = [[[3,2]],[[3,'.']],[[3,'nan']]] #The allele shouldn't be '2' in the ancestral, or be '.' in ancestral.
+    elif args.viterbi_method == 'manual_specification':
+        print "\nUsing a manually specified emission and exclusion scheme. This describes which mutation motifs correspond to which emissions and which SNPs should be excluded."
+        classification_scheme_A = []
+        classification_scheme_B = []
+        exclusion_scheme = []
+        insert_values = {}
+        lambda_haps = [len(pop_inds) * 2.0]
+        in_function = False
+        f_exclusion = open(args.viterbi_specification_file, 'rb')
+        try:
+            for line in f_exclusion:
+                if line[0:2] == '##':
+                    pass
+                elif line[0] == '#' or line[0] == '\n':
+                    #new function
+                    if in_function == True:
+                        function_string = ''.join(function)
+                        for key in insert_values.keys():
+                            function_string = function_string.replace(key, str(insert_values[key]))
+                        if function_name == 'classification_scheme_A':
+                            classification_scheme_A = eval(function_string)
+                        elif function_name == 'classification_scheme_B':
+                            classification_scheme_B = eval(function_string)
+                        elif function_name == 'exclusion_scheme':
+                            exclusion_scheme = eval(function_string)
+                        else:
+                            lambda_function = eval('lambda x1 : ' + ''.join(function))
+                            insert_values[function_name] = lambda_function(*lambda_haps)
+                            
+                    function_name = line[1:-1]
+                    function = []
+                    in_function = True
+                else:
+                    if in_function == True:
+                        line_text = line
+                        line_text = line_text.replace(' ', '')
+                        line_text = line_text.replace('\n', '')
+                        function.append(line_text)
+        except:
+            raise RuntimeError("Failed in manual setting of HMM emission and exlusion criteria. Check file formatting?")
     else:
         raise RuntimeError("%s is not an implemented method" %(args.viterbi_method))
     
@@ -261,7 +309,7 @@ else:
                 #Now call the Viterbi method.
                 print "Performing Viterbi optimisation using method %s" %(args.viterbi_method)
                 
-                if args.viterbi_method == 'binary_archaic_derived_sharing_racimo2016':
+                if args.viterbi_method in ['binary_archaic_derived_sharing_racimo2016', 'manual_specification']:
                     curr_viterbi = None
                     curr_prob = -np.infty
                     for conditions in range(len(initial_conditions)):
@@ -356,21 +404,21 @@ else:
                 os.remove(rm_gfile)
         if args.cleanup_level >= 3:
             #Remove individual-specific fitted parameters files
-            try:
+            if os.path.isfile(pop_outfile + '_fitted_emissions'):
                 os.remove(pop_outfile + '_fitted_emissions')
-            except IOError:
+            else:
                 pass
-            try:
+            if os.path.isfile(pop_outfile + '_fitted_transitions'):
                 os.remove(pop_outfile + '_fitted_transitions')
-            except IOError:
+            else:
                 pass
         if args.cleanup_level >= 4:
             #Remove individual-specific combined results files!
             for chrom in [0,1]:
                 os.remove(pop_outfile + '_archaicAnnotationSummary_combined_types_%d' %(chrom + 1))
-                try:
+                if os.path.isfile(pop_outfile + '_archaicAnnotationSummary_combined_typesViterbi_%d' %(chrom + 1)):
                     os.remove(pop_outfile + '_archaicAnnotationSummary_combined_typesViterbi_%d' %(chrom + 1))
-                except IOError:
+                else:
                     pass
 
         #Write out the EM fitted parameters for all chromosomes included if args.viterbi_EM_mode == 'save_fitted_parameters'

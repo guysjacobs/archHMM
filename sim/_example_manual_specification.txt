@@ -1,0 +1,44 @@
+##Comments are start with ## and are read through.
+##Names of functions to be defined start with #
+##Definitions of functions continue until the next # or the end of the file.
+##Spaces and EOLs are stripped out of functions during parsing, so can be used here for legibility
+##***An entirely blank line ends the file.***
+##Functions to be defined are lambda functions that accept a fixed series of inputs: [the number of haplotypes in the population]
+##Every custom classification must have two classification schemes, one for the first chromosome copy A classification_scheme_A and one for the second chromosome copy B classification_scheme_B, and an exclusion scheme.
+##The example below should implement the default HMM
+##
+##minimum frequency of (1/2n) + 0.0001 where n is the number of individuals.
+#minf
+(1.0/x1)+0.00001
+##0 if different from archaic (4,0) or shared derived with archaic (6,1) and freq in Africa > eta (12, minf + 1e-9, 1.0)
+##1 if shared with archaic and archaic target is derived (6,1), and frequency in Africa is < eta (12,0.0, minf).
+#classification_scheme_A
+[[[[4,0]],
+  [[6,1],
+   [12,minf+1e-9, 1.0]
+  ]
+ ],
+ [[[6,1],
+   [12,0.0,minf]
+  ]
+ ]
+]
+#classification_scheme_B
+[[[[5,0]],
+  [[7,1],
+   [12,minf+1e-9, 1.0]
+  ]
+ ],
+ [[[7,1],
+   [12,0.0,minf]
+  ]
+ ]
+]
+##The allele shouldn't be '2' in the ancestral, or be '.' in ancestral.
+#exclusion_scheme
+[
+ [[3,2]],
+ [[3,'.']],
+ [[3,'nan']]
+]
+
