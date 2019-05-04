@@ -165,14 +165,14 @@ else:
         #0 if [0,1,x,x], [1,0,x,x], [1,1,x,>min]
         #1 if [1,1,x,<min]
         #i.e.
-        #0 if different from archaic (4,0) or shared derived with archaic (6,1) and freq in Africa > eta (12, minf + 1e-9, 1.0)
-        #1 if shared with archaic and archaic target is derived (6,1), and frequency in Africa is < eta (12,0.0, minf).
+        #0 if different from archaic (4,0) or shared derived with archaic (6,1) and freq in Africa > eta (13, minf + 1e-9, 1.0)
+        #1 if shared with archaic and archaic target is derived (6,1), and frequency in Africa is < eta (13,0.0, minf).
         minf = (1.0 / (len(pop_inds) * 2)) + 0.00001
-        classification_scheme_A = [[[[4,0]], [[6,1],[12,minf+1e-9, 1.0]]],
-                                   [[[6,1], [12,0.0,minf]]]]
+        classification_scheme_A = [[[[4,0]], [[6,1],[13,minf+1e-9, 1.0]]],
+                                   [[[6,1], [13,0.0,minf]]]]
         
-        classification_scheme_B = [[[[5,0]], [[7,1],[12,minf+1e-9, 1.0]]],
-                                   [[[7,1], [12,0.0,minf]]]]
+        classification_scheme_B = [[[[5,0]], [[7,1],[13,minf+1e-9, 1.0]]],
+                                   [[[7,1], [13,0.0,minf]]]]
 
         exclusion_scheme = [[[3,2]],[[3,'.']],[[3,'nan']]] #The allele shouldn't be '2' in the ancestral, or be '.' in ancestral.
     elif args.viterbi_method == 'manual_specification':
@@ -287,7 +287,7 @@ else:
                                                                     classification_scheme = [classification_scheme_A, classification_scheme_B][chrom],
                                                                     exclusion_scheme = exclusion_scheme,
                                                                     check_conflicts = True,
-                                                                    freq_columns = [11,12])
+                                                                    freq_columns = [12,13])
                 #If a genetic map is given, read it in.
                 if len(input_recom_list) != 0:
                     gmap_out = pop_archaic_annotation_summary_outfile_chr + '_%d_gmap' %(chrom + 1)

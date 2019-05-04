@@ -10,27 +10,27 @@
 ##minimum frequency of (1/2n) + 0.0001 where n is the number of individuals.
 #minf
 (1.0/x1)+0.00001
-##0 if different from archaic (4,0) or shared derived with archaic (6,1) and freq in Africa > eta (12, minf + 1e-9, 1.0)
-##1 if shared with archaic and archaic target is derived (6,1), and frequency in Africa is < eta (12,0.0, minf).
+##0 if different from archaic (4,0) or shared derived with archaic (6,1) and freq in Africa > eta (13, minf + 1e-9, 1.0)
+##1 if shared with archaic and archaic target is derived (6,1), and frequency in Africa is < eta (13,0.0, minf).
 #classification_scheme_A
 [[[[4,0]],
   [[6,1],
-   [12,minf+1e-9, 1.0]
+   [13,minf+1e-9, 1.0]
   ]
  ],
  [[[6,1],
-   [12,0.0,minf]
+   [13,0.0,minf]
   ]
  ]
 ]
 #classification_scheme_B
 [[[[5,0]],
   [[7,1],
-   [12,minf+1e-9, 1.0]
+   [13,minf+1e-9, 1.0]
   ]
  ],
  [[[7,1],
-   [12,0.0,minf]
+   [13,0.0,minf]
   ]
  ]
 ]

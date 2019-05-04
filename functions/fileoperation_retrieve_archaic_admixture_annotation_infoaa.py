@@ -13,7 +13,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
     This classification can then be interpretted as a series of observed 0s and 1s, which can then be classified by the HMM into chunks.
     
     The output order is:
-    'POS', 'SNP_A', 'SNP_B', 'SNP_ANC', 'SHARED_A', 'SHARED_B', 'TYPE_A', 'TYPE_B', 'ARCHAIC_HET', 'ARCHAIC_QUALITY', 'ARCHAIC_SHARED'
+    'POS', 'SNP_A', 'SNP_B', 'SNP_ANC', 'SHARED_A', 'SHARED_B', 'TYPE_A', 'TYPE_B', 'ARCHAIC_HET', 'ARCHAIC_QUALITY', 'ARCHAIC_SHARED', 'ALTARCHAIC_HET',
     where SNP_A, SNP_B, SNP_ANC are 0/1;
     SHARED_A and SHARED_B are 0 if different from target archaic, 1 if the same and -1 if unknown;
     the TYPE_s are -1 (missing) or 0-5:
@@ -22,6 +22,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
     ARCHAIC_HET is 0 if hom (most), 1 if het,-1 if missing;
     ARCHAIC_QUALITY is 0 if bad and 1 if good, -1 if missing;
     ARCHAIC_SHARED is 0 if not shared, 1 if shared and -1 if unknown (one or both archaics is 'NN');
+    ALTARCHAIC_HET is 0 if hom (most), 1 if het,-1 if missing;
     with optional additional columns POP_MAF and POP_DAF if a population is given.
     """
     open_infile = gzip.open if infile[-3:] == '.gz' else open
@@ -31,6 +32,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
     snp_type = [] #0 if [ID(test,archaic), test is ancestral], 1 if [ID(test,archaic), test is derived], 2 if [ID(test,archaic), unknown]; 3 if [!ID(test,archaic), test is ancestral], 4 if [!ID(test,archaic), test is derived], 5 if [!ID(test,archaic), unknown]; -1 if unknown
     snp_archaic_het = [] #0 if hom, 1 if het; -1 if missing
     snp_archaic_quality = [] #0 if bad, 1 if good; -1 if missing
+    snp_altarchaic_het = [] #0 if hom, 1 if het; -1 if missing
     snp_maf = []
     snp_daf = [] #nan if missing
     snp_archaic_shared = [] #0 if not, 1 if true
@@ -95,11 +97,13 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
                     snp_archaic_het.append('nan')
                     snp_archaic_quality.append('nan')
                     snp_archaic_shared.append('nan')
+                    snp_altarchaic_het.append('nan')
                     snp_value.append(['nan', 'nan'])
                     snp_anc.append('nan')
                 else:
                     deni_snp = re.split("[|/]", split_line[idx_deni])[0:2] if idx_deni not in [None, -1] else ['N','N'] #Ignores phased. Requires diploid.
                     nean_snp = re.split("[|/]", split_line[idx_nean])[0:2] if idx_nean not in [None, -1] else ['N','N'] #Ignores phased. Requires diploid.
+                    altarch_snp = deni_snp if reference == 'Neanderthal' else nean_snp if reference == 'Denisovan' else None
                     snp_value.append([target_snp[0], target_snp[1]])
                     if use_pop == True:
                         num_0 = np.sum([split_line[i].split('|')[0:2].count('0') for i in idx_pop])
@@ -119,6 +123,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
                         snpB_type = '5' if anc_snp[0] == '.' else '3' if target_snp[1] == anc_snp[0] else '4'
                     snp_type.append([snpA_type, snpB_type])
                     snp_archaic_het.append('0' if comp_snp[0] == comp_snp[1] else '1')
+                    snp_altarchaic_het.append('0' if altarch_snp[0] == altarch_snp[1] else '1')
                     archaic_quality = split_line[7].split('*')
                     if len(archaic_quality) == 1:
                         archaic_quality = '1'
@@ -140,13 +145,13 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
                     snps_read += 1
     print "Writing out file %s with %d snps" %(outfile, snps_read)
     f_out = open(outfile, 'w')
-    headers_to_write = ['POS', 'SNP_A', 'SNP_B', 'SNP_ANC', 'SHARED_A', 'SHARED_B', 'TYPE_A', 'TYPE_B', 'ARCHAIC_HET', 'ARCHAIC_QUALITY', 'ARCHAIC_SHARED']
+    headers_to_write = ['POS', 'SNP_A', 'SNP_B', 'SNP_ANC', 'SHARED_A', 'SHARED_B', 'TYPE_A', 'TYPE_B', 'ARCHAIC_HET', 'ARCHAIC_QUALITY', 'ARCHAIC_SHARED',  'ALTARCHAIC_HET']
     if use_pop == True:
         headers_to_write.append('POP_MAF')
         headers_to_write.append('POP_DAF')
     f_out.write('\t'.join(headers_to_write) + '\n')
     for snp in range(len(snp_locs)):
-        line_to_write = [snp_locs[snp], snp_value[snp][0], snp_value[snp][1], snp_anc[snp], snp_shared[snp][0], snp_shared[snp][1], snp_type[snp][0], snp_type[snp][1], snp_archaic_het[snp], snp_archaic_quality[snp], snp_archaic_shared[snp]]
+        line_to_write = [snp_locs[snp], snp_value[snp][0], snp_value[snp][1], snp_anc[snp], snp_shared[snp][0], snp_shared[snp][1], snp_type[snp][0], snp_type[snp][1], snp_archaic_het[snp], snp_archaic_quality[snp], snp_archaic_shared[snp], snp_altarchaic_het[snp]]
         if use_pop == True:
             line_to_write.append(snp_maf[snp])
             line_to_write.append(snp_daf[snp])
