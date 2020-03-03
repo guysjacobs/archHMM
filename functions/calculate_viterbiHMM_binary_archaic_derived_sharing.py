@@ -65,6 +65,7 @@ def calculate_viterbiHMM_binary_archaic_derived_sharing(infile_types, init_prob_
     curr_prob_low_archaic = copy.copy(init_prob_low_archaic)
     curr_prob_high_archaic = copy.copy(init_prob_high_archaic)
     viterbi_out_previous = np.zeros(len(string_of_archaic_alleles)) * np.nan
+    viterbi_out_two_previous = np.zeros(len(string_of_archaic_alleles)) * np.nan
     for step in xrange(iterations):
         #Iteratively calculate the Viterbi algorithm, updating one or both of the prob_low_archaic and prob_high_archaic parameters.
         viterbi_out = support_viterbi(*support_construct_inputs(string_of_archaic_alleles, init_prob_high, curr_prob_low_archaic, curr_prob_high_archaic, transition_probability, gen_map_dist))
@@ -82,7 +83,11 @@ def calculate_viterbiHMM_binary_archaic_derived_sharing(infile_types, init_prob_
         if np.sum(viterbi_out_previous == viterbi_out) == len(viterbi_out):
             print "Converged at step %d" %(step)
             break
+        elif np.sum(viterbi_out_two_previous == viterbi_out) == len(viterbi_out):
+            print "Converged (2-step loop) at step %d" %(step)
+            break
         else:
+            viterbi_out_two_previous = copy.copy(viterbi_out_previous)
             viterbi_out_previous = copy.copy(viterbi_out)
     return viterbi_out, string_of_archaic_alleles, [curr_prob_low_archaic, curr_prob_high_archaic], [np.sum(string_of_archaic_alleles == i) for i in range(max_str + 1)], transition_probability.flatten()
 
@@ -179,8 +184,14 @@ def support_re_calculate_transition_probs(viterbi_out, string_of_archaic_alleles
         if num_trans_opportunities > 1:
             for to_state in range(len(transition_probability)):
                 suggested_transition_probability[hidden_state][to_state] = np.sum(observed_following_states == to_state) / float(num_trans_opportunities)
+                #As in support_re_calculate_transition_probs_genmap, if no transitions occur, leave a ~5% chance of observing >0 transition
+                if suggested_transition_probability[hidden_state][to_state] == 0.0:
+                    suggested_transition_probability[hidden_state][to_state] = 0.051293 / float(num_trans_opportunities)
+                
         else:
-            #No information, so don't update
+            #No information (all archaic or all human), so don't update.
+            for to_state in range(len(transition_probability)):
+                suggested_transition_probability[hidden_state][to_state] = np.exp(suggested_transition_probability[hidden_state][to_state])
             pass
     return np.log(suggested_transition_probability)
 
@@ -195,22 +206,31 @@ def support_re_calculate_transition_probs_genmap(viterbi_out, string_of_archaic_
         observed_following_states = viterbi_out[1:][viterbi_hidden]
         following_gmap = gen_map_dist[0:-1][viterbi_hidden] #NB observed transition is IDx + 1 while the genamp distance is IDx
         num_trans_opportunities = len(observed_following_states)
+        #print observed_following_states[0:50]
         total_recom_distance = np.sum(following_gmap)
         #print "Hidden State:", hidden_state, "\tNum transition opportunities", num_trans_opportunities, "\tTotal recombination distance", total_recom_distance
         if num_trans_opportunities > 1:
             alt_state = abs(hidden_state - 1)
             to_state_mask = observed_following_states == alt_state
             transitions_per_cm = np.sum(to_state_mask) / float(total_recom_distance)
+            #In the rare event that an entire chromosome is inferred as human or archaic, there may be no observed transitions despite many opportunities.
+            #An estimated transition rate of 0/x = 0 in this case is a strong claim. In this case, I instead choose a rate that would leave a 5% chance of observing >0 switches.
+            #The rate is stats.expon.isf(0.95,0.0) = 0.051293 expected transitions in the total recombination distance.
+            if transitions_per_cm == 0.0:
+                print "No transitions observed. Proposing maximum rate given no observations."
+                transitions_per_cm = 0.051293 / float(total_recom_distance)
             suggested_transition_probability[hidden_state][alt_state] = transitions_per_cm
         else:
-            #No information, so don't update
+            #No information (all archaic or all human), so don't update
+            alt_state = abs(hidden_state - 1)
+            suggested_transition_probability[hidden_state][alt_state] = np.exp(suggested_transition_probability[hidden_state][alt_state])
             pass
         suggested_transition_probability[hidden_state][hidden_state] = 1.0
     return np.log(suggested_transition_probability)
             
 
 def support_calculate_viterbi_probabililty(state_path, sequence_of_observations, prob_low_archaic, prob_high_archaic, transition_probability):
-    #Added 08/11/2017 to calculate the overall probability of the obsservations given the inferred parameters and state path.
+    #Added 08/11/2017 to calculate the overall probability of the observations given the inferred parameters and state path.
     #This adds - the number of transitions, the total amount of 0 and 1 in the high introgression class and the total amount of 0 and 1 in the low introgression class
     #A bigger negative indicates a lower probability of this combination of states and observations, given the parameters of the model.
     high_introgression_class = state_path == 1

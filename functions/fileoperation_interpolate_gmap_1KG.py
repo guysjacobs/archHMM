@@ -20,11 +20,12 @@ def fileoperation_interpolate_gmap_1KG(mapfile, posfile, outfile, g_map_pos_IDx 
     with map_open(mapfile, 'rb') as f_map:
         f_map.readline() #headers
         for line in f_map:
+            #print line[0:-1]
             split_line = line[0:-1].split(g_map_delimiter)
             #print g_map_pos_IDx, g_map_map_IDx
-            #print split_line
             gmap.append([split_line[g_map_pos_IDx], split_line[g_map_map_IDx]])
     gmap = np.array(gmap, dtype = float)
+    #print gmap
     if gmap[0][0] == gmap[-1][0]:
         raise RuntimeError("Suspicious gmap behaviour - first position is same as last position, possible when IDXs are misspecified and chromosomes are encoded as integers")
     if len(np.unique(gmap[::,0])) <= 25:

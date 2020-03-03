@@ -74,7 +74,7 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
                 comp_snp = re.split("[|/]", split_line[comp_idx])[0:2] #Ignores phased. Requires diploid. Expected.
                 ref_snp = split_line[3].upper()
                 alt_snp = split_line[4].upper()
-                anc_snp = split_line[idx_anc].split('AA=')[1].upper()
+                anc_snp = split_line[idx_anc].split('AA=')[1][0].upper()
                 #Keeping anc_snp consistent with previous notation
                 snp_ancestral_inconsistent = False
                 if anc_snp == ref_snp:
@@ -144,7 +144,8 @@ def fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile, outfile, 
                         print "pos: ", split_line[1], "\t\tsnp#: ", snps_read
                     snps_read += 1
     print "Writing out file %s with %d snps" %(outfile, snps_read)
-    f_out = open(outfile, 'w')
+    out_open = gzip.open if outfile[-3:] == '.gz' else open
+    f_out = out_open(outfile, 'w')
     headers_to_write = ['POS', 'SNP_A', 'SNP_B', 'SNP_ANC', 'SHARED_A', 'SHARED_B', 'TYPE_A', 'TYPE_B', 'ARCHAIC_HET', 'ARCHAIC_QUALITY', 'ARCHAIC_SHARED',  'ALTARCHAIC_HET']
     if use_pop == True:
         headers_to_write.append('POP_MAF')

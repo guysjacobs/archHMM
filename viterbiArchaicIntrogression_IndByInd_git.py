@@ -4,7 +4,7 @@
 ###The implemetation was designed for flexibility, allowing the detection of tracts
 ###conditioned on multiple archaic hominins for example, or without conditioning on
 ###a human outgroup. However, for ease of use this version just includes the HMM
-###described in Jacobs et al 2018.
+###described in Jacobs et al 2019.
 
 ###The sequence of operations is:
 ###a) annotate each SNP based on its allele in target individual, archaic, outgroup etc.
@@ -79,6 +79,12 @@ parser.add_argument('--viterbi_EM_mode', '-vEMmode', dest='viterbi_EM_mode', act
 
 parser.add_argument('--cleanup_level', '-cl', dest = 'cleanup_level', type = int, action = 'store', nargs = '?', default = '0',
                     help="which files to delete during the calculation. 0 means no files are deleted; 1 deletes the archaicAnnotation file; 2 additionally deletes the chromosome-by-chromosome output files; 3 additionally deletes any fitted emissions or transmissions files; 4 additionally deletes all results files (just left with logs).")
+parser.add_argument('--readin_intermediate', '-readint', dest = 'readin_intermediate', action = 'store_true', default = False,
+                    help="if intermediate (annotation, Viterbi string) files exists already, should they be read in? By default, no - recalculate them.).")
+parser.add_argument('--keep_intermediate', '-keepint', dest = 'keep_intermediate', action = 'store_true', default = False,
+                    help="override the cleanup operation to keep intermediate (annotation, Viterbi string) files. With readin_intermediate this can save needless operation - but the intermediate files can be quite big.).")
+
+
 parser.add_argument('--chrom_to_bed', '-chrombed', dest='chrom_to_bed', action = 'store_true', default = True,
                     help="convert the Viterbi output files to a BED file for comparing individuals/ease of manipulation.")
 
@@ -135,7 +141,11 @@ else:
     if len(args.infile) > 1 or (len(args.infile) == 1 and len(args.chromosomes) == 1): #Multiple infile specified, or both a single infile and chromosome number specified
         input_file_list = args.infile
         chromosome_list = [int(chrom) for chrom in args.chromosomes]
-        input_recom_list = args.infile_recom
+        if len(args.infile_recom) == 0 or len(args.infile_recom) == len(chromosome_list):
+            input_recom_list = args.infile_recom
+        else:
+            print "Using one recombination file for all chromosomes. This is usually only appropriate when using a constant recombination rate and simulated data."
+            input_recom_list = [args.infile_recom[0] for chrom in chromosome_list]
     else: #Multiple chromosomes and one infile
         if len(args.chromosomes) == 3:
             if args.chromosomes[1] == '...':
@@ -145,7 +155,14 @@ else:
         else:
             chromosome_list = [int(chrom) for chrom in args.chromosomes]
         input_file_list = [args.infile[0] %(chrom) for chrom in chromosome_list]
-        input_recom_list = [] if len(args.infile_recom) == 0 else [args.infile_recom[0] %(chrom) for chrom in chromosome_list]
+        if len(args.infile_recom) == 0 or len(args.infile_recom) == len(chromosome_list):
+            input_recom_list = args.infile_recom
+        elif len(args.infile_recom) > 0 and '%' not in args.infile_recom[0]:
+            print "Using one recombination file for all chromosomes. This is usually only appropriate when using a constant recombination rate and simulated data."
+            input_recom_list = [args.infile_recom[0] for chrom in chromosome_list]
+        else:
+            print "Using one recombination file base for all chromosomes."
+            input_recom_list = [args.infile_recom[0] %(chrom) for chrom in chromosome_list]
     
     ##Read in the out/ingroup population, if one is provided.
     if args.popfile is not '':
@@ -239,13 +256,17 @@ else:
                 for line in f_emissions:
                     fitted_emissions.append(np.array(line[0:-1].split('\t')[1:], dtype = float))
                 fitted_emissions = np.array(fitted_emissions)
-                initial_conditions = [[args.viterbi_init_parameters[0], np.average(fitted_emissions[::,0]), np.average(fitted_emissions[::,1])]]
+                if np.sum(np.isnan(fitted_emissions)) >= 1:
+                    print "WARNING: %d of %d fitted emissions were ignored due to failed fittings (nan)" %(np.sum(np.isnan(fitted_emissions)), len(fitted_emissions[::,0]))
+                initial_conditions = [[args.viterbi_init_parameters[0], np.nanmean(fitted_emissions[::,0]), np.nanmean(fitted_emissions[::,1])]]
             with open(pop_outfile + '_fitted_transitions', 'rb') as f_transitions:
                 fitted_transitions = []
                 for line in f_transitions:
                     fitted_transitions.append(np.array(line[0:-1].split('\t')[1:], dtype = float))
                 fitted_transitions = np.array(fitted_transitions)
-                initial_transitions = [np.average(fitted_transitions[::,i]) for i in range(len(fitted_transitions[0]))]
+                if np.sum(np.isnan(fitted_transitions)) >= 1:
+                    print "WARNING: %d of %d fitted emissions were ignored due to failed fittings (nan)" %(np.sum(np.isnan(fitted_transitions)), len(fitted_emissions[::,0]))
+                initial_transitions = [np.nanmean(fitted_transitions[::,i]) for i in range(len(fitted_transitions[0]))]
         else:
             initial_conditions = [args.viterbi_init_parameters]
             initial_transitions = args.viterbi_transition
@@ -268,9 +289,13 @@ else:
                                                                                 '\t'.join(["Classification scheme (Chrom B) is:", str(classification_scheme_B)])]])
         for chrom_calculation in range(len(chromosome_list)):
             #Archaic annotation for the individual for that chromosome
-            pop_archaic_annotation_outfile_chr = pop_outfile + '_archaicAnnotation_%s' %(chromosome_list[chrom_calculation])
+            pop_archaic_annotation_outfile_chr = pop_outfile + '_archaicAnnotation_%s.gz' %(chromosome_list[chrom_calculation])
             pop_archaic_annotation_summary_outfile_chr = pop_outfile + '_archaicAnnotationSummary_%s' %(chromosome_list[chrom_calculation])
-            fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile = input_file_list[chrom_calculation],
+            if args.readin_intermediate == True and os.path.isfile(pop_archaic_annotation_outfile_chr):
+                print "--readin_intermediate is True and file %s exists. Skipping new SNP annotation, will read old files." %(pop_archaic_annotation_outfile_chr)
+                pass
+            else:
+                fileoperation_retrieve_archaic_admixture_annotation_infoaa(infile = input_file_list[chrom_calculation],
                                                                 outfile = pop_archaic_annotation_outfile_chr,
                                                                 target_name = args.target_individuals[individual],
                                                                 reference = args.target_archaic,
@@ -282,7 +307,11 @@ else:
             for chrom in [0,1]:
                 #Classify each of the chromosome copies
                 print "Converting archaic annotation data to input class string for Viterbi estimation chromosome %s" %('%d' %(chromosome_list[chrom_calculation]) + '_%d' %(chrom + 1))
-                snps_posstart_posend = fileoperation_classify_archaic_annotation_as_string_array(infile = pop_archaic_annotation_outfile_chr,
+                if args.readin_intermediate == True and os.path.isfile(pop_archaic_annotation_summary_outfile_chr + '_%d' %(chrom + 1)):
+                    print "--readin_intermediate is True and file %s exists. Skipping emission string construction, will read old files." %(pop_archaic_annotation_summary_outfile_chr + '_%d' %(chrom + 1))
+                    pass
+                else:
+                    snps_posstart_posend = fileoperation_classify_archaic_annotation_as_string_array(infile = pop_archaic_annotation_outfile_chr,
                                                                     outfile_base = pop_archaic_annotation_summary_outfile_chr + '_%d' %(chrom + 1),
                                                                     classification_scheme = [classification_scheme_A, classification_scheme_B][chrom],
                                                                     exclusion_scheme = exclusion_scheme,
@@ -323,7 +352,8 @@ else:
                                                                         fit_transitions = args.viterbi_fit_transition_rates,
                                                                         genetic_map = gmap_out) #gmap_out is None if no gmap is supplied
                         proposed_viterbi_prob = support_calculate_viterbi_probabililty(state_path = proposed_viterbi_out[0], sequence_of_observations = proposed_viterbi_out[1], prob_low_archaic = proposed_viterbi_out[2][0], prob_high_archaic = proposed_viterbi_out[2][1], transition_probability = np.reshape(proposed_viterbi_out[4], (int(np.sqrt(len(proposed_viterbi_out[4]))),int(np.sqrt(len(proposed_viterbi_out[4]))))))
-                        print "Probability for initial conditions %s = %.3f . P(1|low introgression hidden state) = %.3f P(1|high introgression hidden state) = %.3f" %(' '.join(['%.4f' %(i) for i in initial_conditions[conditions]]),
+                        print "Final probability for initial conditions %s (with inferred emissions %s) = %.3f . P(1|low introgression hidden state) = %.3f P(1|high introgression hidden state) = %.3f" %(' '.join(['%.4f' %(i) for i in initial_conditions[conditions]]),
+                                                                                                                                                          ' '.join(['%.4f' %(i) for i in proposed_viterbi_out[2]]),
                                                                                                                                                           proposed_viterbi_prob,
                                                                                                                                                           np.exp(proposed_viterbi_out[2][0]),
                                                                                                                                                           np.exp(proposed_viterbi_out[2][1]))
@@ -372,7 +402,8 @@ else:
                                                                                                                                                                                ' '.join(["%.12f" %(i) for i in np.exp(viterbi_out[4])]))
 
             if args.cleanup_level >= 1:
-                os.remove(pop_archaic_annotation_outfile_chr)
+                if args.keep_intermediate == False:
+                    os.remove(pop_archaic_annotation_outfile_chr)
         
         #End of chrom list for individual. Combine Viterbi into BED of 0-chunks and 1-chunks
         if args.chrom_to_bed is True:
@@ -397,8 +428,9 @@ else:
             #Remove chromosome-specific files
             for chrom in [0,1]:
                 for chrom_calculation in range(len(chromosome_list)):
-                    os.remove(pop_outfile + '_archaicAnnotationSummary_%d_%d_pos' %(chromosome_list[chrom_calculation], chrom + 1))
-                    os.remove(pop_outfile + '_archaicAnnotationSummary_%d_%d_types' %(chromosome_list[chrom_calculation], chrom + 1))
+                    if args.keep_intermediate == False:
+                        os.remove(pop_outfile + '_archaicAnnotationSummary_%d_%d_pos' %(chromosome_list[chrom_calculation], chrom + 1))
+                        os.remove(pop_outfile + '_archaicAnnotationSummary_%d_%d_types' %(chromosome_list[chrom_calculation], chrom + 1))
                     os.remove(pop_outfile + '_archaicAnnotationSummary_%d_%d_types_viterbi' %(chromosome_list[chrom_calculation], chrom + 1))
             for rm_gfile in gmap_file_list:
                 os.remove(rm_gfile)

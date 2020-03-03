@@ -11,6 +11,7 @@
 
 import numpy as np
 import copy
+import gzip
 
 def fileoperation_classify_archaic_annotation_as_string_array(infile, outfile_base, classification_scheme, exclusion_scheme = None, check_conflicts = True, freq_columns = []):
     """
